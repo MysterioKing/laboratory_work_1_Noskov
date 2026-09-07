@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Noskov_labarotary_work_1.vcxproj" />
+  <Project Path="Noskov_labarotary_work_1.vcxproj" Id="b3aee585-b04c-4313-9930-8dd6f3e391c4" />
 </Solution>
