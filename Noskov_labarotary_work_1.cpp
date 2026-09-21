@@ -6,95 +6,91 @@ using namespace std;
 
 struct Pipe {
     string name;
-    double length;
-    int diameter;
-    bool repair;
+    double length = 0;
+    int diameter = 0;
+    bool repair = false;
 };
 
 struct CompressorStation {
     string name;
-    int workshopCount;
-    int workingWorkshops;
-    int stationClass;
+    int workshops = 0;
+    int workingWorkshops = 0;
+    int stationClass = 0;
 };
 
-struct Data {
-    Pipe pipe;
-    CompressorStation station;
-    bool pipeExists;
-    bool stationExists;
-};
-
-int readInt(int minValue, int maxValue) {
+// Ввод целого числа в заданных пределах.
+int readInt(string message, int minValue, int maxValue) {
     int number;
 
     while (true) {
+        cout << message;
         cin >> number;
 
-        if (cin && number >= minValue && number <= maxValue)
+        if (cin && number >= minValue && number <= maxValue) {
+            cin.ignore(10000, '\n');
             return number;
+        }
 
-        if (cin.eof())
-            return -1;
+        if (cin.eof()) return -1;
 
         cin.clear();
         cin.ignore(10000, '\n');
-        cout << "Wrong number. Try again: ";
+        cout << "Wrong number. Try again.\n";
     }
 }
 
+// Ввод положительной длины.
 double readLength() {
     double length;
 
     while (true) {
+        cout << "Length (km): ";
         cin >> length;
 
-        if (cin && length > 0 && length < 1e100)
+        if (cin && length > 0 && length < 1e100) {
+            cin.ignore(10000, '\n');
             return length;
+        }
 
-        if (cin.eof())
-            return -1;
+        if (cin.eof()) return -1;
 
         cin.clear();
         cin.ignore(10000, '\n');
-        cout << "Wrong length. Try again: ";
+        cout << "Length must be greater than zero.\n";
     }
 }
 
-Pipe inputPipe() {
-    Pipe pipe = {};
-
+void inputPipe(Pipe& pipe) {
     cout << "\nPipe name: ";
-    getline(cin >> ws, pipe.name);
+    getline(cin, pipe.name);
 
-    cout << "Length (km): ";
+    while (pipe.name.empty()) {
+        cout << "Name cannot be empty. Enter again: ";
+        getline(cin, pipe.name);
+    }
+
     pipe.length = readLength();
+    pipe.diameter = readInt("Diameter (mm): ", 1, 1000000);
+    pipe.repair = readInt("Under repair? (0-no, 1-yes): ", 0, 1);
 
-    cout << "Diameter (mm): ";
-    pipe.diameter = readInt(1, 1000000);
-
-    cout << "Under repair? (0-no, 1-yes): ";
-    pipe.repair = (readInt(0, 1) == 1);
-
-    return pipe;
+    cout << "Pipe added.\n";
 }
 
-CompressorStation inputStation() {
-    CompressorStation station = {};
-
+void inputStation(CompressorStation& station) {
     cout << "\nStation name: ";
-    getline(cin >> ws, station.name);
+    getline(cin, station.name);
 
-    cout << "Number of workshops: ";
-    station.workshopCount = readInt(0, 1000000);
+    while (station.name.empty()) {
+        cout << "Name cannot be empty. Enter again: ";
+        getline(cin, station.name);
+    }
 
-    cout << "Working workshops: ";
-    station.workingWorkshops = readInt(0, station.workshopCount);
+    station.workshops = readInt("Number of workshops: ", 1, 10000);
+    station.workingWorkshops =
+        readInt("Working workshops: ", 0, station.workshops);
+    station.stationClass = readInt("Station class: ", 0, 10000);
 
-    cout << "Station class: ";
-    station.stationClass = readInt(0, 1000000);
-
-    return station;
+    cout << "Station added.\n";
 }
 
 void printPipe(Pipe pipe) {
@@ -106,37 +102,40 @@ void printPipe(Pipe pipe) {
 
 void printStation(CompressorStation station) {
     cout << "\nStation: " << station.name << '\n';
-    cout << "Workshops: " << station.workshopCount << '\n';
+    cout << "Workshops: " << station.workshops << '\n';
     cout << "Working workshops: " << station.workingWorkshops << '\n';
     cout << "Class: " << station.stationClass << '\n';
 }
 
-Pipe editPipe(Pipe pipe) {
-    pipe.repair = !pipe.repair;
-    return pipe;
+void editPipe(Pipe& pipe) {
+    pipe.repair = readInt("\nNew repair status (0-no, 1-yes): ", 0, 1);
+    cout << "Pipe changed.\n";
 }
 
-CompressorStation editStation(CompressorStation station) {
-    cout << "1. Start workshop\n";
-    cout << "2. Stop workshop\n";
-    cout << "Choice: ";
-
-    int choice = readInt(1, 2);
+void editStation(CompressorStation& station) {
+    int choice = readInt(
+        "\n1. Start workshop\n2. Stop workshop\n0. Cancel\nChoice: ",
+        0, 2
+    );
 
     if (choice == 1) {
-        if (station.workingWorkshops < station.workshopCount)
+        if (station.workingWorkshops < station.workshops) {
             station.workingWorkshops++;
-        else
-            cout << "All workshops are working.\n";
+            cout << "Workshop started.\n";
+        }
+        else {
+            cout << "All workshops are already working.\n";
+        }
     }
     else if (choice == 2) {
-        if (station.workingWorkshops > 0)
+        if (station.workingWorkshops > 0) {
             station.workingWorkshops--;
-        else
+            cout << "Workshop stopped.\n";
+        }
+        else {
             cout << "No working workshops.\n";
+        }
     }
-
-    return station;
 }
 
 void savePipe(ofstream& file, Pipe pipe) {
@@ -148,164 +147,169 @@ void savePipe(ofstream& file, Pipe pipe) {
 
 void saveStation(ofstream& file, CompressorStation station) {
     file << station.name << '\n';
-    file << station.workshopCount << '\n';
+    file << station.workshops << '\n';
     file << station.workingWorkshops << '\n';
     file << station.stationClass << '\n';
+}
+
+void saveData(Pipe pipe, bool pipeExists,
+    CompressorStation station, bool stationExists) {
+    if (!pipeExists && !stationExists) {
+        cout << "Nothing to save.\n";
+        return;
+    }
+
+    ofstream file("data.txt");
+
+    if (!file) {
+        cout << "Cannot open data.txt.\n";
+        return;
+    }
+
+    file << pipeExists << '\n';
+    if (pipeExists) savePipe(file, pipe);
+
+    file << stationExists << '\n';
+    if (stationExists) saveStation(file, station);
+
+    file.close();
+    cout << "\nData saved.\n";
 }
 
 bool loadPipe(ifstream& file, Pipe& pipe) {
     int repair;
 
-    if (!getline(file >> ws, pipe.name) ||
+    if (!getline(file, pipe.name) ||
         !(file >> pipe.length >> pipe.diameter >> repair))
         return false;
 
-    if (pipe.length <= 0 || pipe.length >= 1e100 ||
-        pipe.diameter <= 0 || (repair != 0 && repair != 1))
+    file.ignore(10000, '\n');
+
+    if (pipe.name.empty() || pipe.length <= 0 ||
+        pipe.length >= 1e100 || pipe.diameter <= 0 ||
+        (repair != 0 && repair != 1))
         return false;
 
-    pipe.repair = (repair == 1);
+    pipe.repair = repair;
     return true;
 }
 
 bool loadStation(ifstream& file, CompressorStation& station) {
-    if (!getline(file >> ws, station.name) ||
-        !(file >> station.workshopCount
-            >> station.workingWorkshops >> station.stationClass))
+    if (!getline(file, station.name) ||
+        !(file >> station.workshops
+            >> station.workingWorkshops
+            >> station.stationClass))
         return false;
 
-    if (station.workshopCount < 0 ||
+    if (station.name.empty() || station.workshops <= 0 ||
         station.workingWorkshops < 0 ||
-        station.workingWorkshops > station.workshopCount ||
+        station.workingWorkshops > station.workshops ||
         station.stationClass < 0)
         return false;
 
     return true;
 }
 
-bool saveData(Data data) {
-    ofstream file("data.txt");
-    if (!file) return false;
-
-    file << data.pipeExists << ' ' << data.stationExists << '\n';
-
-    if (data.pipeExists)
-        savePipe(file, data.pipe);
-
-    if (data.stationExists)
-        saveStation(file, data.station);
-
-    file.close();
-    return !file.fail();
-}
-
-bool loadData(Data& data) {
+void loadData(Pipe& pipe, bool& pipeExists,
+    CompressorStation& station, bool& stationExists) {
     ifstream file("data.txt");
-    if (!file) return false;
 
-    Data loaded = {};
+    if (!file) {
+        cout << "data.txt not found.\n";
+        return;
+    }
+
+    Pipe newPipe;
+    CompressorStation newStation;
     int hasPipe, hasStation;
 
-    if (!(file >> hasPipe >> hasStation))
-        return false;
+    if (!(file >> hasPipe) || (hasPipe != 0 && hasPipe != 1)) {
+        cout << "Invalid file.\n";
+        return;
+    }
+    file.ignore(10000, '\n');
 
-    if ((hasPipe != 0 && hasPipe != 1) ||
-        (hasStation != 0 && hasStation != 1))
-        return false;
+    if (hasPipe && !loadPipe(file, newPipe)) {
+        cout << "Invalid pipe data.\n";
+        return;
+    }
 
-    loaded.pipeExists = (hasPipe == 1);
-    loaded.stationExists = (hasStation == 1);
+    if (!(file >> hasStation) || (hasStation != 0 && hasStation != 1)) {
+        cout << "Invalid file.\n";
+        return;
+    }
+    file.ignore(10000, '\n');
 
-    if (loaded.pipeExists && !loadPipe(file, loaded.pipe))
-        return false;
+    if (hasStation && !loadStation(file, newStation)) {
+        cout << "Invalid station data.\n";
+        return;
+    }
 
-    if (loaded.stationExists && !loadStation(file, loaded.station))
-        return false;
+    pipe = newPipe;
+    station = newStation;
+    pipeExists = hasPipe;
+    stationExists = hasStation;
 
-    data = loaded;
-    return true;
+    cout << "\nData loaded.\n";
 }
 
 int main() {
-    Data data = {};
+    Pipe pipe;
+    CompressorStation station;
+    bool pipeExists = false;
+    bool stationExists = false;
 
     while (true) {
         cout << "\n1. Add pipe\n";
-        cout << "2. Add compressor station\n";
+        cout << "2. Add station\n";
         cout << "3. View all objects\n";
         cout << "4. Edit pipe\n";
         cout << "5. Edit station\n";
         cout << "6. Save\n";
         cout << "7. Load\n";
         cout << "0. Exit\n";
-        cout << "\nChoice: ";
 
-        int command;
-
-        if (!(cin >> command)) {
-            if (cin.eof()) return 0;
-            cin.clear();
-            cin.ignore(10000, '\n');
-            cout << "\nEnter a number from 0 to 7.\n";
-            continue;
-        }
+        int command = readInt("\nChoice: ", 0, 7);
+        if (command == -1) return 0;
 
         switch (command) {
         case 0:
             return 0;
 
         case 1:
-            data.pipe = inputPipe();
-            if (cin.eof()) return 0;
-            data.pipeExists = true;
+            inputPipe(pipe);
+            pipeExists = true;
             break;
 
         case 2:
-            data.station = inputStation();
-            if (cin.eof()) return 0;
-            data.stationExists = true;
+            inputStation(station);
+            stationExists = true;
             break;
 
         case 3:
-            if (data.pipeExists) printPipe(data.pipe);
-            else cout << "\nPipe not added.\n";
+            if (pipeExists) printPipe(pipe);
+            else cout << "Pipe not added.\n";
 
-            if (data.stationExists) printStation(data.station);
-            else cout << "\nStation not added.\n";
+            if (stationExists) printStation(station);
+            else cout << "Station not added.\n";
             break;
 
         case 4:
-            if (data.pipeExists) data.pipe = editPipe(data.pipe);
-            else cout << "\nPipe not added.\n";
+            if (pipeExists) editPipe(pipe);
+            else cout << "Pipe not added.\n";
             break;
 
         case 5:
-            if (data.stationExists)
-                data.station = editStation(data.station);
-            else
-                cout << "\nStation not added.\n";
-            if (cin.eof()) return 0;
+            if (stationExists) editStation(station);
+            else cout << "Station not added.\n";
             break;
 
         case 6:
-            if (!data.pipeExists && !data.stationExists)
-                cout << "\nAdd a pipe or station first.\n";
-            else if (saveData(data))
-                cout << "\nData saved.\n";
-            else
-                cout << "\nSave error.\n";
+            saveData(pipe, pipeExists, station, stationExists);
             break;
 
         case 7:
-            if (loadData(data))
-                cout << "\nData loaded.\n";
-            else
-                cout << "\nFile not found or invalid.\n";
-            break;
-
-        default:
-            cout << "\nEnter a number from 0 to 7.\n";
-            cin.ignore(10000, '\n');
+            loadData(pipe, pipeExists, station, stationExists);
             break;
         }
     }
