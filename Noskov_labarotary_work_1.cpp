@@ -18,7 +18,6 @@ struct CompressorStation {
     int stationClass = 0;
 };
 
-// Ввод целого числа в заданных пределах.
 int readInt(string message, int minValue, int maxValue) {
     int number;
 
@@ -26,7 +25,8 @@ int readInt(string message, int minValue, int maxValue) {
         cout << message;
         cin >> number;
 
-        if (cin && number >= minValue && number <= maxValue) {
+        if (cin && cin.peek() == '\n' &&
+            number >= minValue && number <= maxValue) {
             cin.ignore(10000, '\n');
             return number;
         }
@@ -39,7 +39,6 @@ int readInt(string message, int minValue, int maxValue) {
     }
 }
 
-// Ввод положительной длины.
 double readLength() {
     double length;
 
@@ -47,7 +46,8 @@ double readLength() {
         cout << "Length (km): ";
         cin >> length;
 
-        if (cin && length > 0 && length < 1e100) {
+        if (cin && cin.peek() == '\n' &&
+            length > 0 && length < 1e100) {
             cin.ignore(10000, '\n');
             return length;
         }
@@ -56,7 +56,7 @@ double readLength() {
 
         cin.clear();
         cin.ignore(10000, '\n');
-        cout << "Length must be greater than zero.\n";
+        cout << "Wrong length. Try again.\n";
     }
 }
 
@@ -219,8 +219,6 @@ void loadData(Pipe& pipe, bool& pipeExists,
         return;
     }
 
-    Pipe newPipe;
-    CompressorStation newStation;
     int hasPipe, hasStation;
 
     if (!(file >> hasPipe) || (hasPipe != 0 && hasPipe != 1)) {
@@ -229,7 +227,7 @@ void loadData(Pipe& pipe, bool& pipeExists,
     }
     file.ignore(10000, '\n');
 
-    if (hasPipe && !loadPipe(file, newPipe)) {
+    if (hasPipe && !loadPipe(file, pipe)) {
         cout << "Invalid pipe data.\n";
         return;
     }
@@ -240,15 +238,13 @@ void loadData(Pipe& pipe, bool& pipeExists,
     }
     file.ignore(10000, '\n');
 
-    if (hasStation && !loadStation(file, newStation)) {
+    if (hasStation && !loadStation(file, station)) {
         cout << "Invalid station data.\n";
         return;
     }
 
-    pipe = newPipe;
-    station = newStation;
-    pipeExists = hasPipe;
-    stationExists = hasStation;
+    pipeExists = (hasPipe == 1);
+    stationExists = (hasStation == 1);
 
     cout << "\nData loaded.\n";
 }
