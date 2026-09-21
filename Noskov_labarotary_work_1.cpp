@@ -1,9 +1,6 @@
 ﻿#include <iostream>
-#include <string>
 #include <fstream>
-#include <sstream>
-#include <limits>
-#include <cmath>
+#include <string>
 
 using namespace std;
 
@@ -21,104 +18,120 @@ struct CompressorStation {
     int stationClass;
 };
 
-template <typename T>
-bool readNumber(const string& prompt, T minValue, T maxValue, T& value) {
-    string line;
+bool readInt(const string& text, int min, int max, int& number) {
+    string rest;
 
     while (true) {
-        cout << prompt;
-        if (!getline(cin, line)) return false;
+        cout << text;
 
-        istringstream input(line);
-        char extra;
+        if (cin >> number) {
+            getline(cin, rest);
 
-        if ((input >> value) && !(input >> extra) &&
-            isfinite(value) && value >= minValue && value <= maxValue)
-            return true;
+            if (rest.find_first_not_of(" \t\r") == string::npos &&
+                number >= min && number <= max)
+                return true;
+        }
+        else {
+            if (cin.eof()) return false;
+            cin.clear();
+            getline(cin, rest);
+        }
 
-        cout << "Wrong value. Try again.\n";
+        cout << "Wrong number. Try again.\n";
     }
 }
 
-bool readName(const string& prompt, string& name) {
+bool readLength(double& length) {
+    string rest;
+
     while (true) {
-        cout << prompt;
-        if (!getline(cin, name)) return false;
-        if (name.find_first_not_of(" \t") != string::npos) return true;
-        cout << "Name cannot be empty.\n";
+        cout << "Enter pipe length (km): ";
+
+        if (cin >> length) {
+            getline(cin, rest);
+
+            if (rest.find_first_not_of(" \t\r") == string::npos &&
+                length > 0 && length < 1e100)
+                return true;
+        }
+        else {
+            if (cin.eof()) return false;
+            cin.clear();
+            getline(cin, rest);
+        }
+
+        cout << "Length must be a positive number.\n";
     }
+}
+
+bool readName(const string& text, string& name) {
+    cout << text;
+    return static_cast<bool>(getline(cin >> ws, name));
 }
 
 bool inputPipe(Pipe& pipe) {
-    Pipe p;
+    Pipe newPipe;
     int repair;
 
-    if (!readName("\nEnter pipe name: ", p.name)) return false;
-
-    do {
-        if (!readNumber("Enter pipe length (km): ", 0.0,
-            numeric_limits<double>::max(), p.length))
-            return false;
-    } while (p.length == 0);
-
-    if (!readNumber("Enter pipe diameter (mm): ",
-        1, numeric_limits<int>::max(), p.diameter) ||
-        !readNumber("Is pipe under repair? (1-yes/0-no): ",
-            0, 1, repair))
+    if (!readName("\nEnter pipe name: ", newPipe.name) ||
+        !readLength(newPipe.length) ||
+        !readInt("Enter diameter (mm): ", 1, 1000000, newPipe.diameter) ||
+        !readInt("Under repair? (0-no, 1-yes): ", 0, 1, repair))
         return false;
 
-    p.repair = (repair == 1);
-    pipe = p;
+    newPipe.repair = (repair == 1);
+    pipe = newPipe;
     return true;
 }
 
 bool inputStation(CompressorStation& station) {
-    CompressorStation s;
+    CompressorStation newStation;
 
-    if (!readName("\nEnter station name: ", s.name) ||
-        !readNumber("Enter number of workshops: ",
-            0, numeric_limits<int>::max(), s.workshopCount) ||
-        !readNumber("Enter number of workshops in operation: ",
-            0, s.workshopCount, s.workshopsInOperation) ||
-        !readNumber("Enter station class: ",
-            0, numeric_limits<int>::max(), s.stationClass))
+    if (!readName("\nEnter station name: ", newStation.name) ||
+        !readInt("Number of workshops: ",
+            0, 1000000, newStation.workshopCount) ||
+        !readInt("Working workshops: ",
+            0, newStation.workshopCount,
+            newStation.workshopsInOperation) ||
+        !readInt("Station class: ",
+            0, 1000000, newStation.stationClass))
         return false;
 
-    station = s;
+    station = newStation;
     return true;
 }
 
 void printPipe(const Pipe& pipe) {
-    cout << "\n--- Pipe ---\n"
-        << "Name: " << pipe.name << '\n'
-        << "Length: " << pipe.length << " km\n"
-        << "Diameter: " << pipe.diameter << " mm\n"
-        << "Repair: " << (pipe.repair ? "Yes" : "No") << '\n';
+    cout << "\n--- Pipe ---\n";
+    cout << "Name: " << pipe.name << '\n';
+    cout << "Length: " << pipe.length << " km\n";
+    cout << "Diameter: " << pipe.diameter << " mm\n";
+    cout << "Under repair: " << (pipe.repair ? "Yes" : "No") << '\n';
 }
 
-void printCompressorStation(const CompressorStation& station) {
-    cout << "\n--- Compressor Station ---\n"
-        << "Name: " << station.name << '\n'
-        << "Workshops: " << station.workshopCount << '\n'
-        << "Workshops in operation: " << station.workshopsInOperation << '\n'
-        << "Station class: " << station.stationClass << '\n';
+void printStation(const CompressorStation& station) {
+    cout << "\n--- Compressor station ---\n";
+    cout << "Name: " << station.name << '\n';
+    cout << "Workshops: " << station.workshopCount << '\n';
+    cout << "Working workshops: " << station.workshopsInOperation << '\n';
+    cout << "Station class: " << station.stationClass << '\n';
 }
 
 void editPipe(Pipe& pipe) {
     pipe.repair = !pipe.repair;
-    cout << "\nPipe repair status changed.\n";
+    cout << "Repair status changed.\n";
 }
 
 bool editStation(CompressorStation& station) {
     int choice;
 
-    if (!readNumber("\n1. Start workshop\n2. Stop workshop\nEnter choice: ",
+    if (!readInt("\n1. Start workshop\n2. Stop workshop\nChoice: ",
         1, 2, choice))
         return false;
 
     if (choice == 1) {
         if (station.workshopsInOperation < station.workshopCount) {
-            ++station.workshopsInOperation;
+            station.workshopsInOperation++;
             cout << "Workshop started.\n";
         }
         else {
@@ -127,7 +140,7 @@ bool editStation(CompressorStation& station) {
     }
     else {
         if (station.workshopsInOperation > 0) {
-            --station.workshopsInOperation;
+            station.workshopsInOperation--;
             cout << "Workshop stopped.\n";
         }
         else {
@@ -142,7 +155,6 @@ bool saveData(const Pipe& pipe, const CompressorStation& station) {
     ofstream file("data.txt");
     if (!file) return false;
 
-    file.precision(numeric_limits<double>::max_digits10);
     file << pipe.name << '\n'
         << pipe.length << '\n'
         << pipe.diameter << '\n'
@@ -153,40 +165,43 @@ bool saveData(const Pipe& pipe, const CompressorStation& station) {
         << station.stationClass << '\n';
 
     file.close();
-    return static_cast<bool>(file);
+    return !file.fail();
 }
 
 bool loadData(Pipe& pipe, CompressorStation& station) {
     ifstream file("data.txt");
     if (!file) return false;
 
-    Pipe p;
-    CompressorStation s;
+    Pipe newPipe;
+    CompressorStation newStation;
     int repair;
 
-    if (!getline(file, p.name) ||
-        !(file >> p.length >> p.diameter >> repair))
+    if (!getline(file, newPipe.name) ||
+        !(file >> newPipe.length >> newPipe.diameter >> repair))
         return false;
 
-    file.ignore(numeric_limits<streamsize>::max(), '\n');
+    file.ignore(10000, '\n');
 
-    if (!getline(file, s.name) ||
-        !(file >> s.workshopCount >> s.workshopsInOperation >> s.stationClass))
+    if (!getline(file, newStation.name) ||
+        !(file >> newStation.workshopCount
+            >> newStation.workshopsInOperation
+            >> newStation.stationClass))
         return false;
 
-    if (p.name.find_first_not_of(" \t") == string::npos ||
-        !isfinite(p.length) || p.length <= 0 || p.diameter <= 0 ||
+    if (newPipe.name.empty() ||
+        newPipe.length <= 0 || newPipe.length >= 1e100 ||
+        newPipe.diameter <= 0 ||
         (repair != 0 && repair != 1) ||
-        s.name.find_first_not_of(" \t") == string::npos ||
-        s.workshopCount < 0 ||
-        s.workshopsInOperation < 0 ||
-        s.workshopsInOperation > s.workshopCount ||
-        s.stationClass < 0)
+        newStation.name.empty() ||
+        newStation.workshopCount < 0 ||
+        newStation.workshopsInOperation < 0 ||
+        newStation.workshopsInOperation > newStation.workshopCount ||
+        newStation.stationClass < 0)
         return false;
 
-    p.repair = (repair == 1);
-    pipe = p;
-    station = s;
+    newPipe.repair = (repair == 1);
+    pipe = newPipe;
+    station = newStation;
     return true;
 }
 
@@ -200,14 +215,14 @@ int main() {
         cout << "\n1. Add pipe\n"
             << "2. Add compressor station\n"
             << "3. View all objects\n"
-            << "4. Edit pipe status\n"
+            << "4. Edit pipe\n"
             << "5. Edit compressor station\n"
             << "6. Save\n"
             << "7. Load\n"
             << "0. Exit\n";
 
         int command;
-        if (!readNumber("\nEnter command: ", 0, 7, command)) return 0;
+        if (!readInt("\nCommand: ", 0, 7, command)) return 0;
 
         switch (command) {
         case 0:
@@ -227,7 +242,7 @@ int main() {
             if (pipeExists) printPipe(pipe);
             else cout << "\nPipe not added.\n";
 
-            if (stationExists) printCompressorStation(station);
+            if (stationExists) printStation(station);
             else cout << "\nStation not added.\n";
             break;
 
@@ -250,16 +265,17 @@ int main() {
                 cout << "\nAdd pipe and station first.\n";
             else
                 cout << (saveData(pipe, station)
-                    ? "\nData saved.\n" : "\nCould not save data.\n");
+                    ? "\nData saved.\n" : "Save error.\n");
             break;
 
         case 7:
             if (loadData(pipe, station)) {
-                pipeExists = stationExists = true;
+                pipeExists = true;
+                stationExists = true;
                 cout << "\nData loaded.\n";
             }
             else {
-                cout << "\nFile not found or contains invalid data.\n";
+                cout << "\nFile not found or invalid.\n";
             }
             break;
         }
